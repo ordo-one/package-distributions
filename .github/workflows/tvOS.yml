@@ -10,5 +10,5 @@ jobs:
     build:
         uses: tayloraswift/swift-device-action/.github/workflows/build.yml@master
         with:
-            xcode-scheme: 'Random'
+            xcode-scheme: 'package-distributions'
             destination: ${{ github.workflow }}
