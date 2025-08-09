@@ -1,4 +1,4 @@
-name: iOS
+name: tvOS
 
 on:
     push:
