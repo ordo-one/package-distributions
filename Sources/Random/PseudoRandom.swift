@@ -15,7 +15,7 @@ extension PseudoRandom {
 }
 extension PseudoRandom {
     @inlinable public mutating func roll(_ n: Int64, _ d: Int64) -> Bool {
-        self.int64(in: 0 ..< d) < n
+        n <= 0 ? false : n < d ? self.int64(in: 0 ..< d) < n : true
     }
 
     @inlinable public mutating func int64() -> Int64 {
