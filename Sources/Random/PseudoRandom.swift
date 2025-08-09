@@ -1,5 +1,3 @@
-import RealModule
-
 @frozen public struct PseudoRandom {
     @usableFromInline var wyhash: Wyhash
 

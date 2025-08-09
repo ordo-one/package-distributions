@@ -4,6 +4,7 @@ import PackageDescription
 let package:Package = .init(
     name: "package-distributions",
     products: [
+        .library(name: "Random", targets: ["Random"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-numerics", from: "1.0.3"),
@@ -27,3 +28,10 @@ let package:Package = .init(
         ),
     ]
 )
+for target: Target in package.targets {
+    {
+        $0 = ($0 ?? []) + [
+            .enableUpcomingFeature("ExistentialAny"),
+        ]
+    } (&target.swiftSettings)
+}
