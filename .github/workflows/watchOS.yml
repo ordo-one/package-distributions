@@ -1,4 +1,4 @@
-name: visionOS
+name: watchOS
 
 on:
     push:

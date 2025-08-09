@@ -26,7 +26,7 @@ jobs:
 
             -   name: Validate documentation
                 run: |
-                    unidoc compile \
+                    unidoc build \
                     --swift-toolchain $SWIFT_INSTALLATION \
                     --ci fail-on-errors \
                     --project-path .
@@ -43,6 +43,6 @@ jobs:
 
             -   name: Validate documentation
                 run: |
-                    unidoc compile \
+                    unidoc build \
                     --ci fail-on-errors \
                     --project-path .
