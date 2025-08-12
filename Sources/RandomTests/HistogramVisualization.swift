@@ -50,25 +50,21 @@ extension HistogramVisualization<Double> {
     ) {
         let data: [(value: Double, count: Int)] = histogram
         let maxCount: Int = data.reduce(1) { max($0, $1.count) }
-        
-        // Create a dictionary for quick lookup
-        var probMap: [Int: Double] = [:]
-        for (index, prob) in expectedProbabilities.enumerated() {
-            probMap[index] = prob
-        }
-        
+
         let visualizer: Self = .init(
             valueLabel: "    x     ",
             columnWidths: columnWidths,
-            maxFrequency: .init(maxCount) / .init(sampleCount),
+            maxFrequency: Double.init(maxCount) / Double.init(sampleCount),
             maxExpected: expectedProbabilities.max() ?? 0.01
         )
-        
+
         // Draw with index-based probability lookup
         visualizer.drawWithIndexedProbabilities(
             data: data,
             sampleCount: sampleCount,
-            expectedProbabilities: probMap
+            expectedProbabilities: expectedProbabilities.enumerated().reduce(into: [:]) {
+                $0[$1.offset] = $1.element
+            }
         )
     }
 }
@@ -113,7 +109,7 @@ extension HistogramVisualization {
             )
         }
     }
-    
+
     private func drawWithIndexedProbabilities(
         data: [(value: Value, count: Int)],
         sampleCount: Int,
