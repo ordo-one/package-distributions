@@ -36,29 +36,39 @@ struct HistogramVisualization<Value> where Value: HistogramValue {
     }
 }
 extension HistogramVisualization<Double> {
+    /// Visualizes a continuous distribution histogram with accurate expected probabilities.
+    /// - Parameters:
+    ///   - histogram: Array of (midpoint, count) pairs for each bin
+    ///   - sampleCount: Total number of samples
+    ///   - expectedProbabilities: Pre-calculated exact probabilities for each bin (using CDF differences)
+    ///   - columnWidths: Column width configuration for display
     static func visualizeContinuousHistogram(
         histogram: [(Double, Int)],
         sampleCount: Int,
-        expectedDensity: (Double) -> Double,
-        binWidth: Double,
+        expectedProbabilities: [Double],
         columnWidths: ColumnWidths = .standard
     ) {
-        func expectedProbability(_ x: Double) -> Double {
-            expectedDensity(x) * binWidth
-        }
-
         let data: [(value: Double, count: Int)] = histogram
         let maxCount: Int = data.reduce(1) { max($0, $1.count) }
+        
+        // Create a dictionary for quick lookup
+        var probMap: [Int: Double] = [:]
+        for (index, prob) in expectedProbabilities.enumerated() {
+            probMap[index] = prob
+        }
+        
         let visualizer: Self = .init(
             valueLabel: "    x     ",
             columnWidths: columnWidths,
             maxFrequency: .init(maxCount) / .init(sampleCount),
-            maxExpected: data.map { expectedProbability($0.value) }.max() ?? 0.01
+            maxExpected: expectedProbabilities.max() ?? 0.01
         )
-        visualizer.draw(
+        
+        // Draw with index-based probability lookup
+        visualizer.drawWithIndexedProbabilities(
             data: data,
             sampleCount: sampleCount,
-            expectedProbability: expectedProbability
+            expectedProbabilities: probMap
         )
     }
 }
@@ -100,6 +110,23 @@ extension HistogramVisualization {
                 count: count,
                 sampleCount: sampleCount,
                 expectedPercent: expectedProbability(value)
+            )
+        }
+    }
+    
+    private func drawWithIndexedProbabilities(
+        data: [(value: Value, count: Int)],
+        sampleCount: Int,
+        expectedProbabilities: [Int: Double]
+    ) {
+        self.printTableHeader()
+        let sorted = data.sorted(by: { $0.value < $1.value })
+        for (index, (value, count)) in sorted.enumerated() {
+            self.printTableRow(
+                value: value,
+                count: count,
+                sampleCount: sampleCount,
+                expectedPercent: expectedProbabilities[index] ?? 0.0
             )
         }
     }
