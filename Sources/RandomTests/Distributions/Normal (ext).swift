@@ -66,37 +66,38 @@ extension Normal: StatisticsTestable {
     func visualize(histogram: [Double: Int], sampleCount: Int) {
         let bins: Int = 40
 
-        let valueRange: (min: Double, max: Double) = histogram.keys.reduce(
-            into: (.infinity, -.infinity)
-        ) {
-            $0.min = min($0.min, $1)
-            $0.max = max($0.max, $1)
+        // Use the THEORETICAL range for consistent binning
+        let range: Range<Double> = self.μ - 4 * self.σ ..< self.μ + 4 * self.σ
+        let binWidth: Double = (range.upperBound - range.lowerBound) / .init(bins)
+
+        var histogram: [(midpoint: Double, count: Int)] = (0 ..< bins).map {
+            (
+                midpoint: range.lowerBound + (Double.init($0) + 0.5) * binWidth,
+                count: 0
+            )
         }
 
-        guard valueRange.max > valueRange.min else {
-            print("No valid range for histogram visualization.")
-            return
-        }
-
-        let binWidth: Double = (valueRange.max - valueRange.min) / .init(bins)
-
-        var binnedHistogram: [(midpoint: Double, count: Int)] = (0..<bins).map { i in
-            let midpoint: Double = valueRange.min + (Double(i) + 0.5) * binWidth
-            return (midpoint: midpoint, count: 0)
-        }
-
-        // Populate the counts for the bins
+        // Populate the counts for the bins using the actual samples
         for (sample, count): (Double, Int) in histogram {
-            let i: Int = min(bins - 1, max(0, .init((sample - valueRange.min) / binWidth)))
-            binnedHistogram[i].count += count
+            if range ~= sample {
+                let i: Int = Int.init((sample - range.lowerBound) / binWidth)
+                histogram[max(0, min(i, bins - 1))].count += count
+            }
         }
 
-        // Now, visualize the correctly binned data
+        // Pre-calculate ACCURATE expected probabilities using CDF
+        let expectedProbabilities: [Double] = (0 ..< bins).map {
+            let binMin: Double = range.lowerBound + Double.init($0) * binWidth
+            let binMax: Double = binMin + binWidth
+            // Use CDF difference for exact probability
+            return self.cdf(binMax) - self.cdf(binMin)
+        }
+
+        // Visualize with accurate expected probabilities
         HistogramVisualization.visualizeContinuousHistogram(
-            histogram: binnedHistogram,
+            histogram: histogram,
             sampleCount: sampleCount,
-            expectedDensity: { self.pdf($0) },
-            binWidth: binWidth
+            expectedProbabilities: expectedProbabilities
         )
     }
 }
