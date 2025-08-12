@@ -9,7 +9,6 @@ let package: Package = .init(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-numerics", from: "1.0.3"),
-        .package(url: "https://github.com/ordo-one/package-benchmark", .upToNextMajor(from: "1.4.0")),
     ],
     targets: [
         .target(
@@ -27,18 +26,6 @@ let package: Package = .init(
             dependencies: [
                 .target(name: "Random")
             ],
-        ),
-
-        .executableTarget(
-            name: "RandomBenchmarks",
-            dependencies: [
-                .target(name: "Random"),
-                .product(name: "Benchmark", package: "package-benchmark"),
-            ],
-            path: "Benchmarks/RandomBenchmarks",
-            plugins: [
-                .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
-            ]
         ),
     ]
 )
