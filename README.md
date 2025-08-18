@@ -6,8 +6,6 @@ The ***package-distributions*** library is a portable, Foundation-free library f
 [documentation](https://swiftinit.org/docs/package-distributions) ·
 [license](LICENSE)
 
-</div>
-
 
 ## Requirements
 
