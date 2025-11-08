@@ -25,7 +25,10 @@ extension Normal: StatisticsTestable {
         if self.σ <= 0 { return [] }
 
         let chiSquareBins: Int = 20
-        let testRange: (min: Double, max: Double) = (min: self.μ - 4 * self.σ, max: self.μ + 4 * self.σ)
+        let testRange: (min: Double, max: Double) = (
+            min: self.μ - 4 * self.σ,
+            max: self.μ + 4 * self.σ
+        )
         let binWidth: Double = (testRange.max - testRange.min) / Double.init(chiSquareBins)
 
         var observedCounts: [Int] = .init(repeating: 0, count: chiSquareBins)
@@ -42,7 +45,10 @@ extension Normal: StatisticsTestable {
             let binMin: Double = testRange.min + Double.init($0) * binWidth
             let binMax: Double = binMin + binWidth
             let expectedProbability: Double = self.cdf(binMax) - self.cdf(binMin)
-            return .init(observed: observedCounts[$0], expected: Double.init(sampleCount) * expectedProbability)
+            return .init(
+                observed: observedCounts[$0],
+                expected: Double.init(sampleCount) * expectedProbability
+            )
         }
     }
 

@@ -129,21 +129,21 @@ extension HistogramVisualization {
 
     private func printTableHeader() {
         let header: String = """
-            \(self.valueLabel.padding(left: self.columnWidths.value)) \
-            |    Count    \
-            |   Actual %   \
-            |  Expected %  \
-            | Actual \("".padding(right: self.columnWidths.bar - 7)) \
-            | Expected
-            """
+        \(self.valueLabel.padding(left: self.columnWidths.value)) \
+        |    Count    \
+        |   Actual %   \
+        |  Expected %  \
+        | Actual \("".padding(right: self.columnWidths.bar - 7)) \
+        | Expected
+        """
         let separator: String = """
-            \(String.init(repeating: "-", count: self.columnWidths.value))--\
-            +-------------\
-            +--------------\
-            +--------------\
-            +----------------------\
-            +----------------------
-            """
+        \(String.init(repeating: "-", count: self.columnWidths.value))--\
+        +-------------\
+        +--------------\
+        +--------------\
+        +----------------------\
+        +----------------------
+        """
         print(header)
         print(separator)
     }
