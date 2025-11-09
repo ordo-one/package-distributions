@@ -5,6 +5,14 @@
         self.wyhash = .init(seed: seed)
     }
 }
+extension PseudoRandom: RawRepresentable {
+    @inlinable public init(rawValue: UInt64) {
+        self.wyhash = .init(rawValue: rawValue)
+    }
+    @inlinable public var rawValue: UInt64 {
+        self.wyhash.rawValue
+    }
+}
 extension PseudoRandom {
     @inlinable public var generator: Wyhash {
         get { self.wyhash }
