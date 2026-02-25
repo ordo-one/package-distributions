@@ -60,14 +60,14 @@ extension Binomial: StatisticsTestable {
     }
 
     func visualize(histogram: [Int64: Int], sampleCount: Int) {
-        let rangeMin: Int64 = max(0, .init(self.μ - 4 * .sqrt(self.σ²)))
-        let rangeMax: Int64 = min(self.n, .init(self.μ + 4 * .sqrt(self.σ²)))
+        let lower: Int64 = max(0, .init(self.μ - 4 * .sqrt(self.σ²)))
+        let upper: Int64 = min(self.n, .init(self.μ + 4 * .sqrt(self.σ²)))
 
         HistogramVisualization.visualizeDiscreteHistogram(
             histogram: histogram,
             sampleCount: sampleCount,
             expectedProbability: { self.pdf($0) },
-            valueRange: rangeMin...rangeMax
+            range: lower ... upper,
         )
     }
 }
