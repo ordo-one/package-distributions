@@ -43,7 +43,7 @@ extension BinomialTests {
         Binomial[n, p].performStandardStatisticalTests(
             sampleCount: 1_000_000,
             using: &self.random,
-            visualize: n < 1_000_000
+            visualize: Double.init(n) * p < 10_000
         )
     }
     @Test(
@@ -59,7 +59,7 @@ extension BinomialTests {
         Binomial[n, p].performStandardStatisticalTests(
             sampleCount: 1_000_000,
             using: &self.random,
-            visualize: n < 1_000_000
+            visualize: Double.init(n) * p < 10_000
         )
     }
 
