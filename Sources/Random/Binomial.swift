@@ -5,7 +5,7 @@ import RealModule
     private static var iterations: Int { 200 }
 
     /// TODO: fine tune
-    @inlinable static var normalApproximationThreshold: Double { 1_000_000 }
+    @inlinable static var normalApproximationThreshold: Double { 100_000 }
 
     public let n: Int64
     public let p: Double
