@@ -1,7 +1,7 @@
 /// Utilities for visualizing distribution histograms in terminal output.
 struct HistogramVisualization<Value> where Value: HistogramValue {
     /// Unicode block characters used for high-precision bar charts.
-    private static var blocks: [String] { ["▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"] }
+    private static var blocks: [Unicode.Scalar] { ["▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"] }
 
     /// Standard column widths for consistent table output.
     struct ColumnWidths {
@@ -73,12 +73,10 @@ extension HistogramVisualization<Int64> {
         histogram: [Int64: Int],
         sampleCount: Int,
         expectedProbability: (Int64) -> Double,
-        valueRange: ClosedRange<Int64>,
+        range: ClosedRange<Int64>,
         columnWidths: ColumnWidths = .compact
     ) {
-        let data: [(value: Int64, count: Int)] = valueRange.map {
-            ($0, histogram[$0, default: 0])
-        }
+        let data: [(value: Int64, count: Int)] = range.map { ($0, histogram[$0, default: 0]) }
         let maxCount: Int = data.reduce(1) { max($0, $1.count) }
         let visualizer: Self = .init(
             valueLabel: " k  ",
@@ -101,11 +99,15 @@ extension HistogramVisualization {
     ) {
         self.printTableHeader()
         for (value, count): (Value, Int) in data.sorted(by: { $0.value < $1.value }) {
+            let expected: Double = expectedProbability(value)
+            if !expected.isFinite {
+                fatalError("invalid expected probability ([\(value)] = \(expected))")
+            }
             self.printTableRow(
                 value: value,
                 count: count,
                 sampleCount: sampleCount,
-                expectedPercent: expectedProbability(value)
+                expectedPercent: expected
             )
         }
     }
@@ -181,16 +183,23 @@ extension HistogramVisualization {
     }
 
     private func bar(value: Double, maxValue: Double) -> String {
-        guard maxValue > 0, value > 0 else { return "" }
-        let barLength: Int = .init((value / maxValue) * .init(self.columnWidths.bar * 8))
-        let actualBarLength: Int = barLength > 0 ? max(1, barLength) : 0
-        let fullBlocks: Int = actualBarLength / 8
-        let fractionalIndex: Int = actualBarLength % 8
-        let fullBlockString: String = String(repeating: "█", count: fullBlocks)
-        if fractionalIndex > 0 {
-            return fullBlockString + Self.blocks[fractionalIndex - 1]
-        } else {
-            return fullBlockString
+        guard maxValue > 0, value > 0 else {
+            return ""
         }
+        guard
+        let quantized: Int = .init(
+            exactly: ((value / maxValue) * Double.init(self.columnWidths.bar * 8)).rounded()
+        ) else {
+            fatalError("Bar length calculation overflowed for value: \(value), maxValue: \(maxValue)")
+        }
+        let pixels: Int = quantized > 0 ? max(1, quantized) : 0
+        let (blocks, remainder): (Int, remainder: Int) = pixels.quotientAndRemainder(
+            dividingBy: 8
+        )
+        var bar: String = .init(repeating: "█", count: blocks)
+        if  remainder > 0 {
+            bar.append(Character.init(Self.blocks[remainder - 1]))
+        }
+        return bar
     }
 }
