@@ -39,16 +39,26 @@ extension Binomial {
 
     // Theoretical binomial probability.
     @inlinable public func pdf(_ k: Int64) -> Double {
+        if  self.p <= 0 {
+            return k == 0 ? 1 : 0
+        }
+        if  self.p >= 1 {
+            return k == self.n ? 1 : 0
+        }
+
+        guard 0 ... self.n ~= k else {
+            return 0
+        }
+
         let l: Double = .init(self.n - k)
         let n: Double = .init(self.n)
         let k: Double = .init(k)
         let q: Double = 1 - self.p
-        let nCk: Double = .exp(
-            Double.logGamma(n + 1) -
-            Double.logGamma(k + 1) -
-            Double.logGamma(l + 1)
-        )
-        return nCk * Double.pow(p, k) * Double.pow(q, l)
+        /// this calculation done in log space to avoid numerical saturation
+        let nCk: Double = Double.logGamma(n + 1)
+            - Double.logGamma(k + 1)
+            - Double.logGamma(l + 1)
+        return Double.exp(nCk + k * Double.log(self.p) + l * Double.log(q))
     }
 }
 extension Binomial {
