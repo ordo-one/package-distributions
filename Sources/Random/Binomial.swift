@@ -241,7 +241,7 @@ extension Binomial {
             } else {
                 // region 4: right exponential tail
                 let x: Double = envelope.r - Double.log(v) / λ.r
-                if  x > Double.init(Int64.max) {
+                if  x >= Double.init(Int64.max) {
                     continue
                 }
 
