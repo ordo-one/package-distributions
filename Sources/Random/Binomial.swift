@@ -187,14 +187,7 @@ extension Binomial {
         // area of the triangle, plus parallelograms, plus both tails
         area.2 = area.1 + c / λ.r
 
-        let logGamma: (success: Double, failure: Double) = (
-            success: Double.logGamma(mode + 1),
-            failure: Double.logGamma(Double.init(n) - mode + 1)
-        )
-        let logScale: Double = logGamma.success + logGamma.failure
-        let logOdds: Double = Double.log(p / q)
-
-        // 2. Generation & Rejection Loop
+        var logCache: (scale: Double, odds: Double)? = nil
         while true {
             /// v in the range (0, 1] to avoid log(0)
             let v: Double = 1 - Double.random(in: 0 ..< 1, using: &generator)
@@ -253,8 +246,20 @@ extension Binomial {
             let x: Double = Double.init(k)
             // note that there is sometimes a “squeeze test” that appears here, as was written
             // in the original paper, but it was later revealed to be incorrect
-            let pdf: Double = logScale
-                + (x - mode) * logOdds
+            let log: (scale: Double, odds: Double)
+            if  let logCache: (scale: Double, odds: Double) {
+                log = logCache
+             } else {
+                /// these are heavy computations, and they are only used 20 to 25 percent of the
+                /// time, so we compute them lazily and then cache the result for later
+                let success: Double = .logGamma(mode + 1)
+                let failure: Double = .logGamma(Double.init(n) - mode + 1)
+                log = (scale: success + failure, odds: Double.log(p / q))
+                logCache = log
+            }
+
+            let pdf: Double = log.scale
+                + (x - mode) * log.odds
                 - Double.logGamma(x + 1)
                 - Double.logGamma(Double.init(n) - x + 1)
 
