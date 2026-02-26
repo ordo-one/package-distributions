@@ -2,10 +2,11 @@ import RealModule
 
 /// Binomial distribution implementation with optimizations for large n values
 @frozen public struct Binomial {
-    private static var iterations: Int { 200 }
+    @inlinable static var thresholdNormal: Double { 10_000 }
+    @inlinable static var thresholdBTPE: Double { 30 }
+    @inlinable static var thresholdRare: Double { 0.05 }
 
-    /// TODO: fine tune
-    @inlinable static var normalApproximationThreshold: Double { 100_000 }
+    private static var iterations: Int { 200 }
 
     public let n: Int64
     public let p: Double
@@ -20,23 +21,100 @@ extension Binomial {
 }
 extension Binomial {
     @inlinable public func sample(using generator: inout some RandomNumberGenerator) -> Int64 {
-        self.sample { .random(in: 0 ... 1, using: &generator) }
-    }
-
-    /// Sample from a binomial distribution using inverse transform sampling.
-    @inlinable public func sample(U: () -> Double) -> Int64 {
         if self.p <= 0 { return 0 }
         if self.p >= 1 { return self.n }
+        if self.n <= 0 { return 0 }
 
+        let n: Double = Double.init(self.n)
+        let μ: Double = n * self.p
         let q: Double = 1 - self.p
-        let u: Double = U()
-
-        // B(n, p) = n – B(n, 1 – p)
-        return self.p < 0.5
-            ?          Self.cdfInverse(u: u, n: self.n, p: self.p, q: q)
-            : self.n - Self.cdfInverse(u: u, n: self.n, p: q, q: self.p)
+        let σ²: Double = μ * q
+        if  σ² > Self.thresholdNormal {
+            let σ: Double = .sqrt(σ²)
+            let u: Double = .random(in: 0 ... 1, using: &generator)
+            let z: Double = Normal.cdfInverse(u)
+            return min(self.n, max(0, Int64.init((μ + z * σ).rounded())))
+        } else if q < self.p {
+            let m: Int64
+            if  σ² >= Self.thresholdBTPE {
+                m = Self.sampleBTPE(
+                    n: self.n,
+                    μ: n * q,
+                    σ: .sqrt(σ²),
+                    p: q,
+                    q: self.p,
+                    using: &generator
+                )
+            } else if q < Self.thresholdRare {
+                m = Self.sampleGeometric(n: self.n, p: q, using: &generator)
+            } else {
+                m = Self.cdfInverse(
+                    n: self.n,
+                    μ: n * q,
+                    σ: .sqrt(σ²),
+                    p: q,
+                    q: self.p,
+                    u: .random(in: 0 ... 1, using: &generator),
+                )
+            }
+            return self.n - m
+        } else {
+            let m: Int64
+            if  σ² >= Self.thresholdBTPE {
+                m = Self.sampleBTPE(
+                    n: self.n,
+                    μ: μ,
+                    σ: .sqrt(σ²),
+                    p: self.p,
+                    q: q,
+                    using: &generator
+                )
+            } else if p < Self.thresholdRare {
+                m = Self.sampleGeometric(n: self.n, p: self.p, using: &generator)
+            } else {
+                m = Self.cdfInverse(
+                    n: self.n,
+                    μ: μ,
+                    σ: .sqrt(σ²),
+                    p: self.p,
+                    q: q,
+                    u: .random(in: 0 ... 1, using: &generator),
+                )
+            }
+            return m
+        }
     }
+}
+extension Binomial {
+    // geometric jumps
+    @inlinable static func sampleGeometric(
+        n: Int64,
+        p: Double,
+        using generator: inout some RandomNumberGenerator
+    ) -> Int64 {
+        let scale: Double = 1 / Double.log(onePlus: -p)
 
+        var successes: Int64 = 0
+        var remaining: Int64 = n
+
+        repeat {
+            /// u in the range (0, 1] to avoid log(0)
+            let u: Double = 1 - .random(in: 0 ..< 1, using: &generator)
+
+            // Calculate number of failures before the next success
+            let jump: Int64 = Int64.init(Double.log(u) * scale) + 1
+
+            if  remaining >= jump {
+                successes += 1
+                remaining -= jump
+            } else {
+                break
+            }
+        } while remaining > 0
+        return successes
+    }
+}
+extension Binomial {
     // Theoretical binomial probability.
     @inlinable public func pdf(_ k: Int64) -> Double {
         if  self.p <= 0 {
@@ -62,13 +140,139 @@ extension Binomial {
     }
 }
 extension Binomial {
-    /// Find the binomial value using binary search on the CDF
-    /// For large n, uses direct normal approximation for significant performance improvement
-    @usableFromInline static func cdfInverse(
-        u: Double,
+    /// Executes the BTPE (Binomial, Triangle, Parallelogram, Exponential) Algorithm.
+    /// Guarantees exact statistical accuracy in O(1) expected time for variance >= 30.
+    @inlinable static func sampleBTPE(
         n: Int64,
+        μ: Double,
+        σ: Double,
         p: Double,
-        q: Double
+        q: Double,
+        using generator: inout some RandomNumberGenerator
+    ) -> Int64 {
+        /// continuous mode
+        let peak: Double = μ + p
+        /// discrete mode
+        let mode: Double = peak.rounded(.down)
+        let width: Double = Double.init(Int64.init(2.195 * σ - 4.6 * q)) + 0.5
+
+        /// defines the horizontal dimensions of the triangular region, and the two
+        /// parallelograms stacked above it on either side
+        let envelope: (l: Double, center: Double, r: Double)
+
+        envelope.center = mode + 0.5
+        envelope.l = envelope.center - width
+        envelope.r = envelope.center + width
+
+        /// dictates the vertical height of the parallelogram (region 2) that sits on top of
+        /// the triangle (region 1), the exact formula is a mathematically derived upper bound
+        /// created by Kachitvichyanukul and Schmeiser
+        let c: Double = 0.134 + 20.5 / (15.3 + mode)
+
+        /// tangent slopes of the exponential tails
+        let slope: (l: Double, r: Double) = (
+            l: (peak - envelope.l) / (peak - envelope.l * p),
+            r: (envelope.r - peak) / (envelope.r * q)
+        )
+        let λ: (l: Double, r: Double) = (
+            l: slope.l * (1 + 0.5 * slope.l),
+            r: slope.r * (1 + 0.5 * slope.r)
+        )
+
+        let area: (Double, Double, total: Double)
+        // area of the triangle, plus the two parallelograms (looks like a house)
+        area.0 = width * (1 + 2 * c)
+        // area of the triangle, plus parallelograms, plus the left tail
+        area.1 = area.0 + c / λ.l
+        // area of the triangle, plus parallelograms, plus both tails
+        area.2 = area.1 + c / λ.r
+
+        let logGamma: (success: Double, failure: Double) = (
+            success: Double.logGamma(mode + 1),
+            failure: Double.logGamma(Double.init(n) - mode + 1)
+        )
+        let logScale: Double = logGamma.success + logGamma.failure
+        let logOdds: Double = Double.log(p / q)
+
+        // 2. Generation & Rejection Loop
+        while true {
+            /// v in the range (0, 1] to avoid log(0)
+            let v: Double = 1 - Double.random(in: 0 ..< 1, using: &generator)
+            let u: Double = area.total * Double.random(in: 0 ..< 1, using: &generator)
+
+            let k: Int64
+            let y: Double
+
+            if  u <= width {
+                // region 1: triangle, automatically accepted, point generated by
+                // transforming uniform random point into triangle
+                return Int64.init(envelope.center - width * v + u)
+            } else if u <= area.0 {
+                // region 2: parallelograms
+                let x: Double = envelope.l + (u - width) / c
+                k = Int64.init(x)
+
+                guard k >= 0, k <= n else {
+                    // this point won’t possibly be accepted
+                    continue
+                }
+
+                /// this is the height of the triangle, to which a random uniform offset is
+                /// added to generate a point in the parallelogram
+                let h: Double = 1 - abs(envelope.center - x) / width
+                y = h + v * c
+
+                guard y > 0 else {
+                    continue
+                }
+            } else if u <= area.1 {
+                // region 3: left exponential tail
+                let x: Double = envelope.l + Double.log(v) / λ.l
+                // if we do not round down here, negative values will be
+                // incorrectly rounded up towards zero
+                k = Int64.init(x.rounded(.down))
+
+                guard k >= 0 else {
+                    continue
+                }
+
+                y = v * (u - area.0) * λ.l
+            } else {
+                // region 4: right exponential tail
+                let x: Double = envelope.r - Double.log(v) / λ.r
+                k = Int64.init(x)
+
+                guard k <= n else {
+                    continue
+                }
+
+                y = v * (u - area.1) * λ.r
+            }
+
+            // Compares the generated point mathematically against the true Binomial probability
+            let x: Double = Double.init(k)
+            // note that there is sometimes a “squeeze test” that appears here, as was written
+            // in the original paper, but it was later revealed to be incorrect
+            let pdf: Double = logScale
+                + (x - mode) * logOdds
+                - Double.logGamma(x + 1)
+                - Double.logGamma(Double.init(n) - x + 1)
+
+            if  pdf >= Double.log(y) {
+                return k
+            }
+        }
+    }
+}
+extension Binomial {
+    /// Find the binomial value using binary search on the CDF
+    @usableFromInline static func cdfInverse(
+        n: Int64,
+        μ: Double,
+        σ: Double,
+        p: Double,
+        q: Double,
+        u: Double,
     ) -> Int64 {
         let n: (i: Int64, f: Double) = (n, Double.init(n))
 
@@ -76,19 +280,9 @@ extension Binomial {
         if u <=     Double.pow(q, n.f) { return 0 }
         if u >= 1 - Double.pow(p, n.f) { return n.i }
 
-        // Get approximate starting point using normal approximation
-        let μ: Double = n.f * p
-        let σ: Double = Double.sqrt(μ * q)
-
         // Use quantile function of normal distribution
         let z: Double = Normal.cdfInverse(u)
         let guess: Int64 = min(max(0, Int64.init((μ + z * σ).rounded())), n.i)
-
-        // For very large n, if n*p*q > threshold, we can use the normal approximation directly
-        // This is a significant optimization for large n values!
-        if μ * q > Self.normalApproximationThreshold {
-            return guess
-        }
 
         // For smaller n, continue with binary search for greater accuracy
         // Start with our initial guess from normal approximation
