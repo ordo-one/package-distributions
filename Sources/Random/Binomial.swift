@@ -106,17 +106,16 @@ extension Binomial {
         var remaining: Int64 = n
 
         repeat {
-            /// u in the range (0, 1] to avoid log(0)
-            let u: Double = 1 - .random(in: 0 ..< 1, using: &generator)
-
-            // Calculate number of failures before the next success
-            let jump: Int64 = Int64.init(Double.log(u) * scale) + 1
-
-            if  remaining >= jump {
-                successes += 1
-                remaining -= jump
-            } else {
+            let u: Double = .random(in: 0 ... 1, using: &generator)
+            // calculate number of failures before the next success
+            // this number may be very large, so it should not be cast to `Int64` eagerly
+            let jump: Double = Double.log(u) * scale
+            if  jump >= Double.init(remaining) {
                 break
+            } else {
+                successes += 1
+                remaining -= 1
+                remaining -= Int64.init(jump)
             }
         } while remaining > 0
         return successes
