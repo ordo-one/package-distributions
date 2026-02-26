@@ -33,7 +33,15 @@ extension Binomial {
             let σ: Double = .sqrt(σ²)
             let u: Double = .random(in: 0 ... 1, using: &generator)
             let z: Double = Normal.cdfInverse(u)
-            return min(self.n, max(0, Int64.init((μ + z * σ).rounded())))
+            let x: Double = (μ + z * σ).rounded()
+            if  x >= n {
+                return self.n
+            } else if
+                x <= 0 {
+                return 0
+            } else {
+                return Int64.init(x)
+            }
         } else if q < self.p {
             let m: Int64
             if  σ² >= Self.thresholdBTPE {
@@ -282,8 +290,17 @@ extension Binomial {
         let n: (i: Int64, f: Double) = (n, Double.init(n))
 
         // Use quantile function of normal distribution
+        let guess: Int64
+
         let z: Double = Normal.cdfInverse(u)
-        let guess: Int64 = min(max(0, Int64.init((μ + z * Double.sqrt(σ²)).rounded())), n.i)
+        let x: Double = (μ + z * Double.sqrt(σ²)).rounded()
+        if  x >= n.f {
+            guess = n.i
+        } else if x <= 0 {
+            guess = 0
+        } else {
+            guess = Int64.init(x)
+        }
 
         // For smaller n, continue with binary search for greater accuracy
         // Start with our initial guess from normal approximation
