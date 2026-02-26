@@ -107,6 +107,22 @@ let benchmarks: @Sendable () -> Void = {
         }
     }
 
+    Benchmark("Binomial.sample - Loyalty E2") { benchmark in
+        var random = PseudoRandom(seed: 13)
+        let distribution = Binomial[100000, 0.01]
+        for _ in benchmark.scaledIterations {
+            blackHole(distribution.sample(using: &random.generator))
+        }
+    }
+
+    Benchmark("Binomial.sample - Loyalty E3") { benchmark in
+        var random = PseudoRandom(seed: 13)
+        let distribution = Binomial[100000, 0.001]
+        for _ in benchmark.scaledIterations {
+            blackHole(distribution.sample(using: &random.generator))
+        }
+    }
+
     Benchmark("Binomial.sample - Edge case (p≈0)") { benchmark in
         var random = PseudoRandom(seed: 42)
         let distribution = Binomial[1000, 0.001]
