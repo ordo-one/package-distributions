@@ -210,9 +210,13 @@ extension Binomial {
             } else if u <= area.0 {
                 // region 2: parallelograms
                 let x: Double = envelope.l + (u - width) / c
+                if  x < 0 {
+                    continue
+                }
+
                 k = Int64.init(x)
 
-                guard k >= 0, k <= n else {
+                guard k <= n else {
                     // this point won’t possibly be accepted
                     continue
                 }
@@ -228,18 +232,19 @@ extension Binomial {
             } else if u <= area.1 {
                 // region 3: left exponential tail
                 let x: Double = envelope.l + Double.log(v) / λ.l
-                // if we do not round down here, negative values will be
-                // incorrectly rounded up towards zero
-                k = Int64.init(x.rounded(.down))
-
-                guard k >= 0 else {
+                if  x < 0 {
                     continue
                 }
 
+                k = Int64.init(x)
                 y = v * (u - area.0) * λ.l
             } else {
                 // region 4: right exponential tail
                 let x: Double = envelope.r - Double.log(v) / λ.r
+                if  x > Double.init(Int64.max) {
+                    continue
+                }
+
                 k = Int64.init(x)
 
                 guard k <= n else {
@@ -251,6 +256,7 @@ extension Binomial {
 
             // Compares the generated point mathematically against the true Binomial probability
             let x: Double = Double.init(k)
+            let n: Double = Double.init(n)
             // note that there is sometimes a “squeeze test” that appears here, as was written
             // in the original paper, but it was later revealed to be incorrect
             let log: (scale: Double, odds: Double)
@@ -260,7 +266,7 @@ extension Binomial {
                 /// these are heavy computations, and they are only used 20 to 25 percent of the
                 /// time, so we compute them lazily and then cache the result for later
                 let success: Double = .logGamma(mode + 1)
-                let failure: Double = .logGamma(Double.init(n) - mode + 1)
+                let failure: Double = .logGamma(n - mode + 1)
                 log = (scale: success + failure, odds: Double.log(p / q))
                 logCache = log
             }
@@ -268,7 +274,7 @@ extension Binomial {
             let pdf: Double = log.scale
                 + (x - mode) * log.odds
                 - Double.logGamma(x + 1)
-                - Double.logGamma(Double.init(n) - x + 1)
+                - Double.logGamma(n - x + 1)
 
             if  pdf >= Double.log(y) {
                 return k
