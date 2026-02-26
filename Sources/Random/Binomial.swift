@@ -51,7 +51,7 @@ extension Binomial {
                 m = Self.cdfInverse(
                     n: self.n,
                     μ: n * q,
-                    σ: .sqrt(σ²),
+                    σ²: σ²,
                     p: q,
                     q: self.p,
                     u: .random(in: 0 ... 1, using: &generator),
@@ -75,7 +75,7 @@ extension Binomial {
                 m = Self.cdfInverse(
                     n: self.n,
                     μ: μ,
-                    σ: .sqrt(σ²),
+                    σ²: σ²,
                     p: self.p,
                     q: q,
                     u: .random(in: 0 ... 1, using: &generator),
@@ -269,20 +269,16 @@ extension Binomial {
     @usableFromInline static func cdfInverse(
         n: Int64,
         μ: Double,
-        σ: Double,
+        σ²: Double,
         p: Double,
         q: Double,
         u: Double,
     ) -> Int64 {
         let n: (i: Int64, f: Double) = (n, Double.init(n))
 
-        // Fast path for extreme cases
-        if u <=     Double.pow(q, n.f) { return 0 }
-        if u >= 1 - Double.pow(p, n.f) { return n.i }
-
         // Use quantile function of normal distribution
         let z: Double = Normal.cdfInverse(u)
-        let guess: Int64 = min(max(0, Int64.init((μ + z * σ).rounded())), n.i)
+        let guess: Int64 = min(max(0, Int64.init((μ + z * Double.sqrt(σ²)).rounded())), n.i)
 
         // For smaller n, continue with binary search for greater accuracy
         // Start with our initial guess from normal approximation
