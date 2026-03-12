@@ -190,7 +190,9 @@ extension HistogramVisualization {
         let quantized: Int = .init(
             exactly: ((value / maxValue) * Double.init(self.columnWidths.bar * 8)).rounded()
         ) else {
-            fatalError("Bar length calculation overflowed for value: \(value), maxValue: \(maxValue)")
+            fatalError(
+                "Bar length calculation overflowed for value: \(value), maxValue: \(maxValue)"
+            )
         }
         let pixels: Int = quantized > 0 ? max(1, quantized) : 0
         let (blocks, remainder): (Int, remainder: Int) = pixels.quotientAndRemainder(
