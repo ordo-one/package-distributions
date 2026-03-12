@@ -262,7 +262,7 @@ extension Binomial {
             let log: (scale: Double, odds: Double)
             if  let logCache: (scale: Double, odds: Double) {
                 log = logCache
-             } else {
+            } else {
                 /// these are heavy computations, and they are only used 20 to 25 percent of the
                 /// time, so we compute them lazily and then cache the result for later
                 let success: Double = .logGamma(mode + 1)
