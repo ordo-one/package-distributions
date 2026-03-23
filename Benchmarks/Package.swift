@@ -9,7 +9,7 @@ let package: Package = .init(
     dependencies: [
         .package(path: "../"),
         .package(url: "https://github.com/ordo-one/dollup", from: "1.0.1"),
-        .package(url: "https://github.com/ordo-one/package-benchmark", from: "1.4.0")),
+        .package(url: "https://github.com/ordo-one/package-benchmark", from: "1.4.0"),
     ],
     targets: [
         .executableTarget(
