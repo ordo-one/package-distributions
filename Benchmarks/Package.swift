@@ -8,7 +8,8 @@ let package: Package = .init(
     ],
     dependencies: [
         .package(path: "../"),
-        .package(url: "https://github.com/ordo-one/package-benchmark", .upToNextMajor(from: "1.4.0")),
+        .package(url: "https://github.com/ordo-one/dollup", from: "1.0.1"),
+        .package(url: "https://github.com/ordo-one/package-benchmark", from: "1.4.0")),
     ],
     targets: [
         .executableTarget(
@@ -27,9 +28,8 @@ let package: Package = .init(
 
 for target: Target in package.targets {
     {
-        $0 =
-            ($0 ?? []) + [
-                .enableUpcomingFeature("ExistentialAny")
-            ]
+        $0 = ($0 ?? []) + [
+            .enableUpcomingFeature("ExistentialAny")
+        ]
     }(&target.swiftSettings)
 }
