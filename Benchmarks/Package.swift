@@ -15,7 +15,7 @@ let package: Package = .init(
         .executableTarget(
             name: "RandomBenchmarks",
             dependencies: [
-                .product(name: "Random", package: "package-distributions"),
+                .product(name: "Random", package: "distributions"),
                 .product(name: "Benchmark", package: "package-benchmark"),
             ],
             path: "Benchmarks/RandomBenchmarks",
